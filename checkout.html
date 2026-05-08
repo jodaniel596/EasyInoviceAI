@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceAI — Upgrade to Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#0D0D0B;--ink-soft:#3A3A36;--ink-muted:#7A7A72;
+    --paper:#F5F3EE;--paper-warm:#EDE9E1;--paper-card:#FAFAF7;
+    --accent:#1A6B4A;--accent-light:#D4EDE3;--accent-mid:#2A8F62;
+    --rule:rgba(13,13,11,0.1);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'Instrument Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+  }
+  body{font-family:var(--sans);background:var(--ink);color:var(--paper);min-height:100vh;line-height:1.6}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 2rem;border-bottom:1px solid rgba(255,255,255,.08)}
+  .nav-logo{font-family:var(--serif);font-size:1.25rem;color:var(--paper);text-decoration:none}
+  .nav-logo span{color:var(--accent-mid);font-style:italic}
+  .nav-links a{font-size:.85rem;color:rgba(245,243,238,.5);text-decoration:none;transition:color .15s}
+  .nav-links a:hover{color:var(--paper)}
+  .btn{padding:.5rem 1.25rem;border-radius:4px;font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;display:inline-block}
+
+  .page{max-width:980px;margin:0 auto;padding:4rem 2rem}
+
+  .header{text-align:center;margin-bottom:4rem}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-mid);margin-bottom:1rem}
+  .header h1{font-family:var(--serif);font-size:clamp(2.5rem,5vw,4rem);letter-spacing:-2px;line-height:1.05;margin-bottom:.875rem}
+  .header h1 em{color:var(--accent-mid);font-style:italic}
+  .header p{color:rgba(245,243,238,.5);font-size:1.05rem;max-width:480px;margin:0 auto}
+
+  /* TOGGLE */
+  .billing-toggle{display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:3.5rem}
+  .toggle-label{font-size:.875rem;color:rgba(245,243,238,.5)}
+  .toggle-label.active{color:var(--paper);font-weight:500}
+  .toggle-switch{width:48px;height:26px;background:rgba(255,255,255,.12);border-radius:13px;cursor:pointer;position:relative;transition:background .2s;border:1px solid rgba(255,255,255,.1)}
+  .toggle-switch.annual{background:var(--accent)}
+  .toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;background:white;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .toggle-switch.annual .toggle-knob{transform:translateX(22px)}
+  .savings-badge{background:var(--accent);color:white;font-size:.72rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;font-family:var(--mono)}
+
+  /* PLANS */
+  .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden}
+  .plan{background:rgba(13,13,11,.6);padding:2.5rem 2rem;position:relative;transition:background .2s}
+  .plan:hover{background:rgba(13,13,11,.8)}
+  .plan.featured{background:rgba(26,107,74,.15);border:1px solid rgba(42,143,98,.3)}
+  .plan-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--accent);color:white;font-family:var(--mono);font-size:.68rem;font-weight:500;padding:.3rem 1rem;border-radius:0 0 6px 6px;letter-spacing:.05em;white-space:nowrap}
+  .plan-name{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,243,238,.4);margin-bottom:1.5rem}
+  .plan-price-wrap{margin-bottom:1.75rem}
+  .plan-price{font-family:var(--serif);font-size:3.5rem;letter-spacing:-2px;color:var(--paper);line-height:1}
+  .plan-price sup{font-family:var(--sans);font-size:1.1rem;font-weight:600;vertical-align:super;line-height:1}
+  .plan-price-note{font-size:.8rem;color:rgba(245,243,238,.35);margin-top:.4rem}
+  .plan-desc{font-size:.875rem;color:rgba(245,243,238,.5);margin-bottom:2rem;line-height:1.6}
+  .plan-features{list-style:none;margin-bottom:2rem}
+  .plan-features li{font-size:.85rem;color:rgba(245,243,238,.7);padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;gap:.6rem;align-items:flex-start}
+  .plan-features li:last-child{border:none}
+  .feat-check{color:var(--accent-mid);flex-shrink:0;margin-top:1px}
+  .feat-x{color:rgba(245,243,238,.2);flex-shrink:0;margin-top:1px}
+  .plan-btn{display:block;width:100%;padding:.875rem;text-align:center;border-radius:4px;font-weight:600;font-size:.95rem;cursor:pointer;font-family:var(--sans);transition:all .2s;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:var(--paper);text-decoration:none}
+  .plan-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
+  .plan.featured .plan-btn{background:var(--accent);border-color:var(--accent);color:white}
+  .plan.featured .plan-btn:hover{background:var(--accent-mid);border-color:var(--accent-mid)}
+
+  /* STRIPE SECTION */
+  .stripe-section{margin-top:5rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+  .stripe-header{padding:2rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:1rem}
+  .stripe-logo{background:rgba(99,91,255,.2);border:1px solid rgba(99,91,255,.3);border-radius:6px;padding:.4rem .875rem;font-family:var(--mono);font-size:.85rem;font-weight:500;color:#A5A0FF;letter-spacing:.02em}
+  .stripe-header h3{font-family:var(--serif);font-size:1.4rem;font-weight:400}
+  .stripe-header p{font-size:.85rem;color:rgba(245,243,238,.4);margin-top:2px}
+  .setup-steps{padding:2rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+  .step{display:flex;gap:1rem}
+  .step-num{width:28px;height:28px;border-radius:50%;background:rgba(42,143,98,.2);border:1px solid rgba(42,143,98,.3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.75rem;color:var(--accent-mid);flex-shrink:0;margin-top:2px}
+  .step h4{font-size:.9rem;font-weight:600;margin-bottom:.35rem}
+  .step p{font-size:.8rem;color:rgba(245,243,238,.45);line-height:1.65}
+  .step code{font-family:var(--mono);font-size:.75rem;background:rgba(255,255,255,.08);padding:.15rem .4rem;border-radius:3px;color:var(--accent-mid)}
+
+  /* CODE BLOCK */
+  .code-block{margin:0 2rem 2rem;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+  .code-header{padding:.5rem 1rem;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06);font-family:var(--mono);font-size:.7rem;color:rgba(245,243,238,.3);display:flex;justify-content:space-between;align-items:center}
+  .copy-btn{background:none;border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:.2rem .6rem;font-family:var(--mono);font-size:.68rem;color:rgba(245,243,238,.4);cursor:pointer;transition:all .15s}
+  .copy-btn:hover{background:rgba(255,255,255,.08);color:var(--paper)}
+  pre{padding:1.25rem;font-family:var(--mono);font-size:.78rem;line-height:1.8;color:rgba(245,243,238,.7);overflow-x:auto}
+  .kw{color:#A5A0FF} .str{color:#98D6B8} .cm{color:rgba(245,243,238,.28)}
+
+  /* FAQ */
+  .faq{margin-top:4rem}
+  .faq h2{font-family:var(--serif);font-size:1.8rem;letter-spacing:-1px;margin-bottom:2rem;text-align:center}
+  .faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+  .faq-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:1.5rem}
+  .faq-item h4{font-size:.95rem;font-weight:600;margin-bottom:.5rem}
+  .faq-item p{font-size:.85rem;color:rgba(245,243,238,.45);line-height:1.7}
+
+  /* GUARANTEE */
+  .guarantee{text-align:center;margin-top:4rem;padding:3rem;background:rgba(26,107,74,.1);border:1px solid rgba(42,143,98,.2);border-radius:8px}
+  .guarantee-icon{font-size:2.5rem;margin-bottom:1rem}
+  .guarantee h3{font-family:var(--serif);font-size:1.5rem;margin-bottom:.5rem}
+  .guarantee p{color:rgba(245,243,238,.45);font-size:.9rem;max-width:400px;margin:0 auto}
+
+  @media(max-width:768px){.plans{grid-template-columns:1fr}.setup-steps,.faq-grid{grid-template-columns:1fr}.page{padding:2.5rem 1.25rem}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Invoice<span>AI</span></a>
+  <div class="nav-links">
+    <a href="dashboard.html" style="margin-right:1.5rem">Dashboard</a>
+    <a href="app.html">New Invoice</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="header">
+    <div class="eyebrow">// Pricing</div>
+    <h1>Invest in your<br><em>freelance business</em></h1>
+    <p>One plan pays for itself the first time it helps you land a client or get paid on time.</p>
+  </div>
+
+  <div class="billing-toggle">
+    <span class="toggle-label active" id="monthly-label">Monthly</span>
+    <div class="toggle-switch" id="billing-toggle" onclick="toggleBilling()">
+      <div class="toggle-knob"></div>
+    </div>
+    <span class="toggle-label" id="annual-label">Annual</span>
+    <span class="savings-badge" id="savings-badge" style="display:none">Save 30%</span>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price"><sup>$</sup><span class="price-val" data-monthly="0" data-annual="0">0</span></div>
+        <div class="plan-price-note">Free, forever</div>
+      </div>
+      <div class="plan-desc">Perfect for freelancers just getting started.</div>
+      <ul class="plan-features">
+        <li><span class="feat-check">✓</span> 5 invoices per month</li>
+        <li><span class="feat-check">✓</span> AI payment terms (3/mo)</li>
+        <li><span class="feat-check">✓</span> PDF export</li>
+        <li><span class="feat-check">✓</span> Basic line items</li>
+        <li><span class="feat-x">✗</span> <span style="color:rgba(245,243,238,.3)">Unlimited invoices</span></li>
+        <li><span class="feat-x">✗</span> <span style="color:rgba(245,243,238,.3)">Proposal generator</span></li>
+        <li><span class="feat-x">✗</span> <span style="color:rgba(245,243,238,.3)">Custom branding</span></li>
+      </ul>
+      <a href="app.html" class="plan-btn">Get started free</a>
+    </div>
+
+    <div class="plan featured">
+      <div class="plan-badge">MOST POPULAR</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price"><sup>$</sup><span class="price-val" data-monthly="12" data-annual="8">12</span></div>
+        <div class="plan-price-note" id="pro-period">per month, billed monthly</div>
+      </div>
+      <div class="plan-desc">Everything you need to run your freelance business professionally.</div>
+      <ul class="plan-features">
+        <li><span class="feat-check">✓</span> Unlimited invoices</li>
+        <li><span class="feat-check">✓</span> Unlimited proposals</li>
+        <li><span class="feat-check">✓</span> AI terms & email writer</li>
+        <li><span class="feat-check">✓</span> PDF export & email send</li>
+        <li><span class="feat-check">✓</span> Invoice dashboard</li>
+        <li><span class="feat-check">✓</span> Custom branding & logo</li>
+        <li><span class="feat-check">✓</span> Priority support</li>
+      </ul>
+      <a href="https://buy.stripe.com/3cIfZh9474ml0of1oZgMw01" class="plan-btn" id="pro-cta">Start 14-day free trial →</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Agency</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price"><sup>$</sup><span class="price-val" data-monthly="29" data-annual="19">29</span></div>
+        <div class="plan-price-note" id="agency-period">per month, billed monthly</div>
+      </div>
+      <div class="plan-desc">For agencies and high-volume freelancers managing multiple clients.</div>
+      <ul class="plan-features">
+        <li><span class="feat-check">✓</span> Everything in Pro</li>
+        <li><span class="feat-check">✓</span> Multi-client portal</li>
+        <li><span class="feat-check">✓</span> Team members (3 seats)</li>
+        <li><span class="feat-check">✓</span> Client payment tracking</li>
+        <li><span class="feat-check">✓</span> Automated reminders</li>
+        <li><span class="feat-check">✓</span> White-label branding</li>
+        <li><span class="feat-check">✓</span> Dedicated support</li>
+      </ul>
+      <a href="https://buy.stripe.com/3cIfZh9474ml0of1oZgMw01" class="plan-btn">Get Agency plan →</a>
+    </div>
+  </div>
+
+  <!-- STRIPE SETUP -->
+  <div class="stripe-section" id="stripe-section">
+    <div class="stripe-header">
+      <div>
+        <div class="stripe-logo">stripe</div>
+      </div>
+      <div>
+        <h3>Connect Stripe to start collecting payments</h3>
+        <p>Follow these 4 steps to activate subscriptions — takes about 10 minutes.</p>
+      </div>
+    </div>
+    <div class="setup-steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Create a Stripe account</h4>
+          <p>Go to <code>stripe.com</code> and sign up for free. Stripe takes 2.9% + 30¢ per transaction — no monthly fee to Stripe itself.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Create your subscription products</h4>
+          <p>In the Stripe dashboard go to <code>Products → Add Product</code>. Create "InvoiceAI Pro" at $12/month and "InvoiceAI Agency" at $29/month with recurring billing.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Get your Payment Link URLs</h4>
+          <p>In each product, click <code>Payment Link → Create Link</code>. Copy the URL — it looks like <code>buy.stripe.com/abc123</code>. Paste it into the buttons below.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h4>Set up your webhook (optional)</h4>
+          <p>In <code>Developers → Webhooks</code> add your site URL + <code>/webhook</code> to listen for <code>payment_intent.succeeded</code> and unlock Pro features automatically.</p>
+        </div>
+      </div>
+    </div>
+    <div class="code-block">
+      <div class="code-header">
+        <span>Update these URLs in your HTML buttons</span>
+        <button class="copy-btn" onclick="copyCode()">Copy</button>
+      </div>
+      <pre id="code-snippet"><span class="cm">// In checkout.html, replace the plan-btn href values:</span>
+
+<span class="cm">// Pro plan button:</span>
+<span class="kw">&lt;a</span> <span class="str">href</span>=<span class="str">"https://buy.stripe.com/YOUR_PRO_LINK"</span> <span class="str">class</span>=<span class="str">"plan-btn"</span><span class="kw">&gt;</span>
+  Start 14-day free trial →
+<span class="kw">&lt;/a&gt;</span>
+
+<span class="cm">// Agency plan button:</span>
+<span class="kw">&lt;a</span> <span class="str">href</span>=<span class="str">"https://buy.stripe.com/YOUR_AGENCY_LINK"</span> <span class="str">class</span>=<span class="str">"plan-btn"</span><span class="kw">&gt;</span>
+  Get Agency plan →
+<span class="kw">&lt;/a&gt;</span>
+
+<span class="cm">// To add a free trial, in Stripe dashboard:</span>
+<span class="cm">// Product → Pricing → Add trial period → 14 days</span>
+<span class="cm">// Stripe handles the trial automatically — no code needed.</span></pre>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq">
+    <h2>Common questions</h2>
+    <div class="faq-grid">
+      <div class="faq-item">
+        <h4>How does the free trial work?</h4>
+        <p>Start Pro or Agency free for 14 days — no credit card required. At the end of the trial, you'll be asked to add payment details to continue. Cancel anytime before with zero charge.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Can I cancel anytime?</h4>
+        <p>Yes. Cancel from your account settings at any moment. You keep access until the end of your billing period. No cancellation fees, no questions asked.</p>
+      </div>
+      <div class="faq-item">
+        <h4>What payment methods do you accept?</h4>
+        <p>All major credit and debit cards via Stripe — Visa, Mastercard, Amex, and more. Stripe also supports Apple Pay and Google Pay in supported browsers.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Is my data safe?</h4>
+        <p>Invoice data is stored locally in your browser by default. No invoice content is sent to our servers. Payment processing is handled entirely by Stripe, which is PCI DSS Level 1 certified.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="guarantee">
+    <div class="guarantee-icon">🛡️</div>
+    <h3>30-day money-back guarantee</h3>
+    <p>Not happy in your first 30 days? Email us and we'll refund you in full. No forms, no hold music.</p>
+  </div>
+</div>
+
+<script>
+let isAnnual = false;
+
+function toggleBilling() {
+  isAnnual = !isAnnual;
+  const toggle = document.getElementById('billing-toggle');
+  toggle.classList.toggle('annual', isAnnual);
+  document.getElementById('monthly-label').classList.toggle('active', !isAnnual);
+  document.getElementById('annual-label').classList.toggle('active', isAnnual);
+  document.getElementById('savings-badge').style.display = isAnnual ? 'inline' : 'none';
+
+  document.querySelectorAll('.price-val').forEach(el => {
+    el.textContent = isAnnual ? el.dataset.annual : el.dataset.monthly;
+  });
+
+  const proNote = document.getElementById('pro-period');
+  const agNote = document.getElementById('agency-period');
+  if (isAnnual) {
+    proNote.textContent = 'per month, billed $96/year';
+    agNote.textContent = 'per month, billed $228/year';
+  } else {
+    proNote.textContent = 'per month, billed monthly';
+    agNote.textContent = 'per month, billed monthly';
+  }
+}
+
+function copyCode() {
+  const code = document.getElementById('code-snippet').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>

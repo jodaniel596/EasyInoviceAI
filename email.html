@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceAI — Send Invoice</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#0D0D0B;--ink-soft:#3A3A36;--ink-muted:#7A7A72;
+    --paper:#F5F3EE;--paper-warm:#EDE9E1;--paper-card:#FAFAF7;
+    --accent:#1A6B4A;--accent-light:#D4EDE3;--accent-mid:#2A8F62;
+    --rule:rgba(13,13,11,0.1);
+    --serif:'DM Serif Display',Georgia,serif;
+    --sans:'Instrument Sans',system-ui,sans-serif;
+    --mono:'DM Mono',monospace;
+  }
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;background:var(--paper);border-bottom:1px solid var(--rule)}
+  .nav-logo{font-family:var(--serif);font-size:1.25rem;color:var(--ink);text-decoration:none}
+  .nav-logo span{color:var(--accent);font-style:italic}
+  .nav-links{display:flex;gap:1.5rem}
+  .nav-links a{font-size:.85rem;font-weight:500;color:var(--ink-muted);text-decoration:none}
+  .nav-links a:hover{color:var(--ink)}
+  .btn{padding:.5rem 1.25rem;border-radius:4px;font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;border:1.5px solid var(--rule);background:var(--paper);color:var(--ink);transition:all .15s}
+  .btn:hover{border-color:var(--ink-muted)}
+  .btn-accent{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .btn-accent:hover{background:var(--accent);border-color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-green{background:var(--accent);color:white;border-color:var(--accent)}
+  .btn-green:hover{background:var(--accent-mid);border-color:var(--accent-mid)}
+
+  .layout{display:grid;grid-template-columns:1fr 420px;min-height:calc(100vh - 61px)}
+  .compose-panel{padding:2.5rem 2rem;border-right:1px solid var(--rule)}
+  .preview-panel{background:var(--paper-warm);padding:2rem}
+
+  h2{font-family:var(--serif);font-size:1.8rem;letter-spacing:-1px;margin-bottom:.4rem}
+  .subtitle{font-size:.875rem;color:var(--ink-muted);margin-bottom:2rem}
+
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:1.1rem}
+  .field label{font-size:.78rem;font-weight:500;color:var(--ink-soft)}
+  .field input,.field select,.field textarea{font-family:var(--sans);font-size:.9rem;padding:.6rem .875rem;border:1px solid var(--rule);border-radius:4px;background:var(--paper-card);color:var(--ink);outline:none;transition:border-color .15s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+  .field textarea{resize:vertical;min-height:180px;line-height:1.75}
+
+  .section-divider{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);margin:1.75rem 0 1.25rem;padding-bottom:.5rem;border-bottom:1px solid var(--rule)}
+
+  .attach-box{background:var(--paper-card);border:1.5px dashed var(--rule);border-radius:4px;padding:1.25rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:all .15s}
+  .attach-box:hover{border-color:var(--accent);background:var(--accent-light)}
+  .attach-icon{width:36px;height:36px;border-radius:6px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .attach-label{font-size:.875rem;font-weight:500}
+  .attach-sub{font-size:.78rem;color:var(--ink-muted);margin-top:2px}
+
+  .attached-file{background:var(--accent-light);border:1px solid rgba(26,107,74,.2);border-radius:4px;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
+  .attached-file span{color:var(--accent);font-weight:500}
+  .remove-attach{background:none;border:none;cursor:pointer;color:var(--accent);font-size:1.1rem;line-height:1}
+
+  .action-row{display:flex;gap:.75rem;margin-top:1.75rem;align-items:center}
+  .send-note{font-size:.78rem;color:var(--ink-muted)}
+
+  /* AI */
+  .ai-chip{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.7rem;color:var(--accent);letter-spacing:.06em;padding:.3rem .75rem;border:1px solid rgba(26,107,74,.25);border-radius:20px;cursor:pointer;background:var(--accent-light);transition:all .15s;font-weight:500}
+  .ai-chip:hover{background:var(--accent);color:white}
+  .ai-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* EMAIL PREVIEW */
+  .email-card{background:white;border:1px solid var(--rule);border-radius:6px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+  .email-header-bar{background:var(--paper-warm);padding:.75rem 1.25rem;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:.5rem}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .email-meta{padding:1.25rem 1.5rem;border-bottom:1px solid var(--rule)}
+  .email-meta-row{display:flex;gap:.5rem;font-size:.8rem;margin-bottom:.35rem}
+  .meta-key{color:var(--ink-muted);min-width:40px}
+  .meta-val{color:var(--ink);font-weight:500}
+  .email-subject-prev{padding:1rem 1.5rem;border-bottom:1px solid var(--rule);font-weight:600;font-size:.95rem}
+  .email-body-prev{padding:1.5rem;font-size:.875rem;line-height:1.8;color:var(--ink-soft);white-space:pre-wrap;min-height:180px}
+  .email-footer-prev{padding:1rem 1.5rem;border-top:1px solid var(--rule);background:var(--paper-warm);font-size:.75rem;color:var(--ink-muted)}
+  .email-attach-prev{padding:.75rem 1.5rem;border-top:1px solid var(--rule);display:flex;align-items:center;gap:.5rem;font-size:.8rem;color:var(--accent)}
+
+  /* SUCCESS */
+  .success-overlay{position:fixed;inset:0;background:rgba(13,13,11,.6);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  .success-overlay.show{opacity:1;pointer-events:all}
+  .success-card{background:var(--paper-card);border-radius:10px;padding:3rem 2.5rem;text-align:center;max-width:400px;transform:scale(.95);transition:transform .2s}
+  .success-overlay.show .success-card{transform:scale(1)}
+  .success-icon{font-size:3rem;margin-bottom:1rem}
+  .success-card h3{font-family:var(--serif);font-size:1.6rem;margin-bottom:.5rem}
+  .success-card p{color:var(--ink-muted);font-size:.9rem;margin-bottom:1.5rem}
+
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.preview-panel{display:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Invoice<span>AI</span></a>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="app.html">New Invoice</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <div class="compose-panel">
+    <h2>Send invoice</h2>
+    <p class="subtitle">Compose a professional email with your invoice attached.</p>
+
+    <div class="section-divider">// Recipients</div>
+
+    <div class="field">
+      <label>To (client email)</label>
+      <input id="to-email" type="email" value="billing@acme.com" oninput="syncPreview()">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="field">
+        <label>CC (optional)</label>
+        <input id="cc-email" type="email" placeholder="cc@example.com" oninput="syncPreview()">
+      </div>
+      <div class="field">
+        <label>From (your email)</label>
+        <input id="from-email" type="email" value="jane@janesmith.co" oninput="syncPreview()">
+      </div>
+    </div>
+
+    <div class="section-divider">// Message</div>
+
+    <div class="field">
+      <label>Subject line</label>
+      <input id="subject" value="Invoice INV-0042 from Jane Smith Design — $4,150.00 due Jun 7" oninput="syncPreview()">
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+      <label style="font-size:.78rem;font-weight:500;color:var(--ink-soft)">Email body</label>
+      <span class="ai-chip" id="ai-chip" onclick="generateEmail()"><span class="ai-dot"></span>✦ Write with AI</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <textarea id="email-body" oninput="syncPreview()">Hi,
+
+Please find attached invoice INV-0042 for $4,150.00, due on June 7, 2026.
+
+You can pay via bank transfer or PayPal. If you have any questions about this invoice, please don't hesitate to reach out.
+
+Thank you for your business — it's always a pleasure working with you.
+
+Best,
+Jane Smith</textarea>
+    </div>
+
+    <div class="section-divider">// Attachment</div>
+
+    <div id="attach-zone" class="attach-box" onclick="document.getElementById('file-input').click()">
+      <div class="attach-icon">📎</div>
+      <div>
+        <div class="attach-label">Attach your invoice PDF</div>
+        <div class="attach-sub">Click to upload, or drag & drop · PDF, max 10MB</div>
+      </div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf" style="display:none" onchange="handleFile(this)">
+    <div id="attached-display" style="display:none;margin-top:.6rem"></div>
+
+    <div class="action-row">
+      <button class="btn btn-green" id="send-btn" onclick="sendEmail()" style="padding:.65rem 2rem;font-size:.95rem">Send invoice →</button>
+      <button class="btn" onclick="saveDraft()">Save draft</button>
+      <span class="send-note" id="send-note"></span>
+    </div>
+  </div>
+
+  <!-- EMAIL PREVIEW -->
+  <div class="preview-panel">
+    <div style="font-family:var(--mono);font-size:.7rem;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem">// Email preview</div>
+    <div class="email-card">
+      <div class="email-header-bar">
+        <div class="dot" style="background:#FF5F57"></div>
+        <div class="dot" style="background:#FFBD2E"></div>
+        <div class="dot" style="background:#28C840"></div>
+        <span style="font-size:.75rem;color:var(--ink-muted);margin-left:.5rem">New Message</span>
+      </div>
+      <div class="email-meta">
+        <div class="email-meta-row"><span class="meta-key">From</span><span class="meta-val" id="prev-from">jane@janesmith.co</span></div>
+        <div class="email-meta-row"><span class="meta-key">To</span><span class="meta-val" id="prev-to">billing@acme.com</span></div>
+        <div class="email-meta-row" id="prev-cc-row" style="display:none"><span class="meta-key">CC</span><span class="meta-val" id="prev-cc"></span></div>
+      </div>
+      <div class="email-subject-prev" id="prev-subject">Invoice INV-0042 from Jane Smith Design</div>
+      <div class="email-body-prev" id="prev-body">Hi,
+
+Please find attached invoice INV-0042 for $4,150.00, due on June 7, 2026.
+
+You can pay via bank transfer or PayPal. If you have any questions, please reach out.
+
+Thank you for your business.
+
+Best,
+Jane Smith</div>
+      <div class="email-attach-prev" id="prev-attach" style="display:none">
+        <span>📎</span><span id="prev-attach-name">invoice.pdf</span>
+      </div>
+      <div class="email-footer-prev">Sent via InvoiceAI · invoiceai.app</div>
+    </div>
+
+    <div style="margin-top:1.5rem;background:var(--paper-card);border:1px solid var(--rule);border-radius:4px;padding:1rem 1.25rem">
+      <div style="font-family:var(--mono);font-size:.7rem;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">// Quick templates</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <button class="btn" style="text-align:left;font-size:.8rem;font-weight:400" onclick="loadTemplate('reminder')">🔔 Payment reminder (overdue)</button>
+        <button class="btn" style="text-align:left;font-size:.8rem;font-weight:400" onclick="loadTemplate('followup')">📬 Friendly follow-up</button>
+        <button class="btn" style="text-align:left;font-size:.8rem;font-weight:400" onclick="loadTemplate('thankyou')">✅ Payment received — thank you</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="success-overlay" onclick="this.classList.remove('show')">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <h3>Invoice sent!</h3>
+    <p id="success-msg">Your invoice has been sent to billing@acme.com. You'll be notified when they view it.</p>
+    <div style="display:flex;gap:.75rem;justify-content:center">
+      <a href="dashboard.html" class="btn btn-accent">Go to dashboard</a>
+      <button class="btn" onclick="document.getElementById('success-overlay').classList.remove('show')">Send another</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEMPLATES = {
+  reminder: {
+    subject: 'Payment reminder: Invoice INV-0042 is overdue',
+    body: `Hi,
+
+I wanted to reach out regarding invoice INV-0042 for $4,150.00, which was due on June 7, 2026.
+
+It appears this invoice hasn't been paid yet — could you let me know if there's anything holding things up on your end?
+
+If payment has already been sent, please disregard this message. Otherwise, I'd appreciate payment at your earliest convenience.
+
+Thank you,
+Jane Smith`
+  },
+  followup: {
+    subject: 'Following up: Invoice INV-0042',
+    body: `Hi,
+
+Just a quick follow-up on invoice INV-0042 for $4,150.00, sent on May 7. I wanted to make sure it landed safely in your inbox!
+
+If you have any questions or need a different format, just let me know — happy to help.
+
+Best,
+Jane Smith`
+  },
+  thankyou: {
+    subject: 'Payment received — thank you!',
+    body: `Hi,
+
+Just a quick note to confirm I've received your payment for invoice INV-0042. Thank you!
+
+It's been a pleasure working with you on this project. Looking forward to our next collaboration.
+
+Warmly,
+Jane Smith`
+  }
+};
+
+function loadTemplate(key) {
+  const t = TEMPLATES[key];
+  document.getElementById('subject').value = t.subject;
+  document.getElementById('email-body').value = t.body;
+  syncPreview();
+}
+
+function syncPreview() {
+  const from = document.getElementById('from-email').value;
+  const to = document.getElementById('to-email').value;
+  const cc = document.getElementById('cc-email').value;
+  const subject = document.getElementById('subject').value;
+  const body = document.getElementById('email-body').value;
+  document.getElementById('prev-from').textContent = from;
+  document.getElementById('prev-to').textContent = to;
+  const ccRow = document.getElementById('prev-cc-row');
+  if (cc) { ccRow.style.display='flex'; document.getElementById('prev-cc').textContent=cc; }
+  else { ccRow.style.display='none'; }
+  document.getElementById('prev-subject').textContent = subject;
+  document.getElementById('prev-body').textContent = body;
+}
+
+let attachedFile = null;
+function handleFile(input) {
+  const f = input.files[0];
+  if (!f) return;
+  attachedFile = f;
+  document.getElementById('attach-zone').style.display = 'none';
+  const display = document.getElementById('attached-display');
+  display.style.display = 'block';
+  display.innerHTML = `<div class="attached-file"><span>📎 ${f.name} (${(f.size/1024).toFixed(0)}KB)</span><button class="remove-attach" onclick="removeAttach()">×</button></div>`;
+  const prev = document.getElementById('prev-attach');
+  prev.style.display = 'flex';
+  document.getElementById('prev-attach-name').textContent = f.name;
+}
+function removeAttach() {
+  attachedFile = null;
+  document.getElementById('attach-zone').style.display = 'flex';
+  document.getElementById('attached-display').style.display = 'none';
+  document.getElementById('prev-attach').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+async function generateEmail() {
+  const chip = document.getElementById('ai-chip');
+  const bodyEl = document.getElementById('email-body');
+  chip.innerHTML = '<span class="spinner" style="border-top-color:white"></span>Writing...';
+  chip.style.pointerEvents = 'none';
+
+  const to = document.getElementById('to-email').value || 'the client';
+  const subject = document.getElementById('subject').value;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 350,
+        messages: [{
+          role: 'user',
+          content: `Write a short, professional and warm email to send with a freelance invoice. Subject context: "${subject}". Recipient email: "${to}". Under 120 words. Plain text only, no markdown. Include: greeting, brief mention of the attached invoice, payment method (bank transfer or PayPal), offer to answer questions, and a warm sign-off. Sign as "Jane Smith".`
+        }]
+      })
+    });
+    const data = await resp.json();
+    bodyEl.value = data.content.map(b=>b.text||'').join('');
+    syncPreview();
+  } catch(e) {
+    alert('Could not generate email. Please try again.');
+  }
+  chip.innerHTML = '<span class="ai-dot"></span>✦ Rewrite with AI';
+  chip.style.pointerEvents = 'auto';
+}
+
+function sendEmail() {
+  const to = document.getElementById('to-email').value;
+  const subject = document.getElementById('subject').value;
+  const body = document.getElementById('email-body').value;
+  if (!to || !subject || !body) { alert('Please fill in all required fields.'); return; }
+
+  // Build mailto: link as a real email trigger
+  const cc = document.getElementById('cc-email').value;
+  const params = new URLSearchParams();
+  if (cc) params.set('cc', cc);
+  params.set('subject', subject);
+  params.set('body', body);
+  const mailto = `mailto:${encodeURIComponent(to)}?${params.toString()}`;
+  window.location.href = mailto;
+
+  // Show success overlay after short delay
+  setTimeout(() => {
+    document.getElementById('success-msg').textContent = `Your email client has been opened with the invoice email to ${to}. Attach your PDF before sending.`;
+    document.getElementById('success-overlay').classList.add('show');
+  }, 800);
+}
+
+function saveDraft() {
+  const note = document.getElementById('send-note');
+  note.textContent = '✓ Draft saved';
+  setTimeout(()=>note.textContent='', 2500);
+}
+
+syncPreview();
+</script>
+</body>
+</html>

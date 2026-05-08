@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceAI — Create Invoice</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0D0D0B; --ink-soft: #3A3A36; --ink-muted: #7A7A72;
+    --paper: #F5F3EE; --paper-warm: #EDE9E1; --paper-card: #FAFAF7;
+    --accent: #1A6B4A; --accent-light: #D4EDE3; --accent-mid: #2A8F62;
+    --rule: rgba(13,13,11,0.1);
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'Instrument Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem; background: var(--paper);
+    border-bottom: 1px solid var(--rule); position: sticky; top: 0; z-index: 50;
+  }
+  .nav-logo { font-family: var(--serif); font-size: 1.25rem; color: var(--ink); text-decoration: none; }
+  .nav-logo span { color: var(--accent); font-style: italic; }
+  .nav-tabs { display: flex; gap: 2px; background: var(--paper-warm); border-radius: 6px; padding: 3px; border: 1px solid var(--rule); }
+  .tab-btn {
+    padding: 6px 16px; border: none; background: none; cursor: pointer;
+    font-family: var(--sans); font-size: 0.85rem; font-weight: 500;
+    color: var(--ink-muted); border-radius: 4px; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .nav-actions { display: flex; gap: 0.75rem; }
+  .btn { padding: 0.5rem 1.25rem; border-radius: 4px; font-family: var(--sans); font-size: 0.875rem; font-weight: 600; cursor: pointer; border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink); transition: all 0.15s; }
+  .btn:hover { border-color: var(--ink-muted); }
+  .btn-accent { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .btn-accent:hover { background: var(--accent); border-color: var(--accent); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* LAYOUT */
+  .app-layout { display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 61px); }
+  .panel { padding: 2rem; overflow-y: auto; }
+  .panel-left { border-right: 1px solid var(--rule); background: var(--paper); }
+  .panel-right { background: var(--paper-warm); }
+
+  /* FORM */
+  .section-label { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 0.875rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--rule); }
+  .form-group { margin-bottom: 1.5rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.78rem; font-weight: 500; color: var(--ink-soft); }
+  .field input, .field select, .field textarea {
+    font-family: var(--sans); font-size: 0.9rem; padding: 0.55rem 0.75rem;
+    border: 1px solid var(--rule); border-radius: 4px;
+    background: var(--paper-card); color: var(--ink);
+    transition: border-color 0.15s; outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  /* LINE ITEMS */
+  .items-wrap { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: var(--paper-card); }
+  .items-header { display: grid; grid-template-columns: 3fr 0.8fr 1fr 1fr 28px; gap: 0; }
+  .items-header div { font-size: 0.72rem; font-weight: 500; color: var(--ink-muted); padding: 0.5rem 0.75rem; background: var(--paper-warm); border-bottom: 1px solid var(--rule); text-transform: uppercase; letter-spacing: 0.04em; }
+  .item-row { display: grid; grid-template-columns: 3fr 0.8fr 1fr 1fr 28px; border-bottom: 1px solid var(--rule); }
+  .item-row:last-child { border-bottom: none; }
+  .item-row input { border: none; border-right: 1px solid var(--rule); border-radius: 0; background: transparent; font-size: 0.875rem; padding: 0.6rem 0.75rem; color: var(--ink); outline: none; font-family: var(--sans); }
+  .item-row input:focus { background: var(--accent-light); }
+  .item-row input:last-of-type { border-right: none; }
+  .item-amt { display: flex; align-items: center; padding: 0 0.75rem; font-size: 0.875rem; color: var(--ink-soft); font-family: var(--mono); border-right: 1px solid var(--rule); }
+  .del-btn { display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1.1rem; transition: color 0.15s; }
+  .del-btn:hover { color: #c0392b; }
+  .add-row-btn { width: 100%; padding: 0.6rem; font-size: 0.8rem; font-family: var(--sans); background: none; border: none; border-top: 1px dashed var(--rule); cursor: pointer; color: var(--ink-muted); transition: all 0.15s; }
+  .add-row-btn:hover { background: var(--accent-light); color: var(--accent); }
+
+  .totals-box { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; padding: 1rem 1.25rem; margin-top: 0.75rem; }
+  .total-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; padding: 4px 0; color: var(--ink-soft); }
+  .total-row.grand { font-weight: 600; font-size: 1.05rem; color: var(--ink); padding-top: 0.6rem; margin-top: 0.4rem; border-top: 1px solid var(--rule); }
+  .tax-input { width: 50px; font-size: 0.8rem; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); font-family: var(--mono); }
+
+  /* AI BOX */
+  .ai-box { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; padding: 1.25rem; margin-top: 0.75rem; }
+  .ai-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.875rem; }
+  .ai-label { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 0.4rem; }
+  .ai-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .ai-output { font-size: 0.875rem; line-height: 1.75; color: var(--ink-soft); white-space: pre-wrap; min-height: 48px; }
+  .ai-placeholder { color: var(--ink-muted); font-style: italic; }
+
+  /* PROPOSAL PANEL */
+  .prop-panel { padding: 1.5rem; }
+  .prop-output { font-size: 0.9rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; }
+
+  /* PREVIEW */
+  .preview-wrap { padding: 1.5rem; }
+  .invoice-preview {
+    background: white; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 2.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    max-width: 640px; margin: 0 auto;
+  }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+  .inv-biz-name { font-family: var(--serif); font-size: 1.6rem; color: var(--ink); }
+  .inv-biz-email { font-size: 0.8rem; color: var(--ink-muted); margin-top: 3px; }
+  .inv-meta { text-align: right; }
+  .inv-badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 2px; margin-bottom: 6px; }
+  .inv-num { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; }
+  .inv-dates { font-size: 0.75rem; color: var(--ink-muted); margin-top: 4px; }
+  .inv-divider { border: none; border-top: 1px solid var(--rule); margin: 1.5rem 0; }
+  .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.75rem; }
+  .inv-party-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 4px; }
+  .inv-party-name { font-weight: 600; font-size: 0.95rem; }
+  .inv-party-email { font-size: 0.8rem; color: var(--ink-muted); }
+  .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.85rem; }
+  .inv-table th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: left; font-weight: 500; }
+  .inv-table th:last-child, .inv-table td:last-child { text-align: right; }
+  .inv-table td { padding: 9px 8px; border-bottom: 1px solid rgba(13,13,11,0.05); }
+  .inv-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 0.85rem; }
+  .inv-total-row { display: flex; gap: 3rem; color: var(--ink-soft); }
+  .inv-grand { display: flex; gap: 3rem; font-weight: 700; font-size: 1.1rem; color: var(--ink); padding-top: 8px; margin-top: 4px; border-top: 2px solid var(--ink); }
+  .inv-terms { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-size: 0.8rem; color: var(--ink-muted); line-height: 1.75; }
+
+  /* SPINNER */
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 5px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TABS */
+  .tab-content { display: none; }
+  .tab-content.active { display: grid; }
+  .tab-single { display: none; }
+  .tab-single.active { display: block; }
+
+  @media (max-width: 900px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--rule); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Invoice<span>AI</span></a>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('invoice')">Invoice</button>
+    <button class="tab-btn" onclick="switchTab('proposal')">Proposal</button>
+    <button class="tab-btn" onclick="switchTab('preview')">Preview</button>
+  </div>
+  <div class="nav-actions">
+    <button class="btn" onclick="generatePDF()">⬇ Export PDF</button>
+    <button class="btn btn-accent" id="ai-btn" onclick="generateTerms()">✦ Generate AI terms</button>
+  </div>
+</nav>
+
+<!-- INVOICE TAB -->
+<div id="tab-invoice" class="tab-content active" style="grid-template-columns:1fr 1fr; min-height:calc(100vh - 61px)">
+  <div class="panel panel-left">
+
+    <div class="form-group">
+      <div class="section-label">Your business</div>
+      <div class="grid-2">
+        <div class="field"><label>Business name</label><input id="biz-name" value="Jane Smith Design" oninput="syncPreview()"></div>
+        <div class="field"><label>Email</label><input id="biz-email" value="jane@janesmith.co" oninput="syncPreview()"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="section-label">Bill to</div>
+      <div class="grid-2">
+        <div class="field"><label>Client name</label><input id="client-name" value="Acme Corp" oninput="syncPreview()"></div>
+        <div class="field"><label>Client email</label><input id="client-email" value="billing@acme.com" oninput="syncPreview()"></div>
+      </div>
+      <div style="height:0.75rem"></div>
+      <div class="grid-3">
+        <div class="field"><label>Invoice #</label><input id="inv-num" value="INV-0042" oninput="syncPreview()"></div>
+        <div class="field"><label>Issue date</label><input id="inv-date" type="date" value="2026-05-07" oninput="syncPreview()"></div>
+        <div class="field"><label>Due date</label><input id="due-date" type="date" value="2026-06-07" oninput="syncPreview()"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="section-label">Line items</div>
+      <div class="items-wrap">
+        <div class="items-header">
+          <div>Description</div><div>Qty</div><div>Rate ($)</div><div>Amount</div><div></div>
+        </div>
+        <div id="items-body"></div>
+        <button class="add-row-btn" onclick="addItem()">+ Add line item</button>
+      </div>
+      <div class="totals-box">
+        <div class="total-row"><span>Subtotal</span><span id="subtotal" style="font-family:var(--mono)">$0.00</span></div>
+        <div class="total-row">
+          <span>Tax <input class="tax-input" id="tax-rate" type="number" value="15" min="0" max="100" oninput="calcTotals()">%</span>
+          <span id="tax-amt" style="font-family:var(--mono)">$0.00</span>
+        </div>
+        <div class="total-row grand"><span>Total due</span><span id="total-due" style="font-family:var(--mono)">$0.00</span></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="section-label">AI payment terms</div>
+      <div class="ai-box">
+        <div class="ai-header">
+          <div class="ai-label"><span class="ai-dot"></span> Powered by Claude AI</div>
+        </div>
+        <div id="ai-terms" class="ai-output"><span class="ai-placeholder">Click "Generate AI terms" above to write professional payment terms for this invoice.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel panel-right">
+    <div class="preview-wrap">
+      <div style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem">// Live preview</div>
+      <div class="invoice-preview" id="invoice-preview-box">
+        <div class="inv-header">
+          <div>
+            <div class="inv-biz-name" id="prev-biz">Jane Smith Design</div>
+            <div class="inv-biz-email" id="prev-biz-email">jane@janesmith.co</div>
+          </div>
+          <div class="inv-meta">
+            <div class="inv-badge">INVOICE</div>
+            <div class="inv-num" id="prev-num">INV-0042</div>
+            <div class="inv-dates" id="prev-dates">Issued: 2026-05-07 · Due: 2026-06-07</div>
+          </div>
+        </div>
+        <hr class="inv-divider">
+        <div class="inv-parties">
+          <div>
+            <div class="inv-party-label">From</div>
+            <div class="inv-party-name" id="prev-from-name">Jane Smith Design</div>
+            <div class="inv-party-email" id="prev-from-email">jane@janesmith.co</div>
+          </div>
+          <div>
+            <div class="inv-party-label">Bill to</div>
+            <div class="inv-party-name" id="prev-to-name">Acme Corp</div>
+            <div class="inv-party-email" id="prev-to-email">billing@acme.com</div>
+          </div>
+        </div>
+        <table class="inv-table">
+          <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+          <tbody id="prev-items"></tbody>
+        </table>
+        <div class="inv-totals">
+          <div class="inv-total-row"><span>Subtotal</span><span id="prev-sub">$0.00</span></div>
+          <div class="inv-total-row"><span>Tax</span><span id="prev-tax">$0.00</span></div>
+          <div class="inv-grand"><span>Total due</span><span id="prev-total">$0.00</span></div>
+        </div>
+        <div class="inv-terms" id="prev-terms" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSAL TAB -->
+<div id="tab-proposal" class="tab-single" style="display:none">
+  <div class="app-layout">
+    <div class="panel panel-left">
+      <div class="form-group">
+        <div class="section-label">Project details</div>
+        <div class="grid-2">
+          <div class="field"><label>Project name</label><input id="proj-name" value="Website Redesign"></div>
+          <div class="field"><label>Client name</label><input id="prop-client" value="Acme Corp"></div>
+        </div>
+        <div style="height:0.75rem"></div>
+        <div class="field"><label>Project description (brief)</label>
+          <textarea id="proj-desc">Full redesign of company website — 8 pages, mobile responsive, Webflow CMS integration. Client wants modern look, better conversion rates, and improved loading speed.</textarea>
+        </div>
+        <div style="height:0.75rem"></div>
+        <div class="grid-3">
+          <div class="field"><label>Budget (USD)</label><input id="prop-budget" type="number" value="4500"></div>
+          <div class="field"><label>Timeline</label><input id="prop-timeline" value="4 weeks"></div>
+          <div class="field"><label>Your skill/role</label><input id="prop-skill" value="Web Designer"></div>
+        </div>
+      </div>
+      <button class="btn btn-accent" id="prop-btn" onclick="generateProposal()" style="width:100%;padding:0.75rem;font-size:0.95rem">✦ Generate proposal</button>
+    </div>
+    <div class="panel panel-right">
+      <div class="ai-box" style="height:100%;min-height:400px">
+        <div class="ai-header">
+          <div class="ai-label"><span class="ai-dot"></span> AI-generated proposal</div>
+        </div>
+        <div id="ai-proposal" class="ai-output prop-output"><span class="ai-placeholder">Fill in the project details and click Generate proposal to create a professional, client-ready proposal.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW/EXPORT TAB -->
+<div id="tab-preview" class="tab-single" style="display:none; padding:2rem; background:var(--paper-warm); min-height:calc(100vh - 61px)">
+  <div style="max-width:700px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.08em">// Print-ready preview</div>
+        <div style="font-size:0.85rem;color:var(--ink-soft);margin-top:4px">This is exactly what your client will receive.</div>
+      </div>
+      <button class="btn btn-accent" onclick="generatePDF()" style="display:flex;align-items:center;gap:0.4rem">⬇ Download PDF</button>
+    </div>
+    <div id="preview-clone-target"></div>
+  </div>
+</div>
+
+<script>
+let items = [
+  { desc: 'Website design & development', qty: 1, rate: 3500 },
+  { desc: 'SEO setup & optimization', qty: 1, rate: 650 },
+  { desc: 'Revisions (3 rounds included)', qty: 1, rate: 0 },
+];
+
+function fmt(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function renderItems() {
+  const tbody = document.getElementById('items-body');
+  tbody.innerHTML = '';
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <input value="${item.desc}" placeholder="Description" oninput="items[${i}].desc=this.value;syncPreview()">
+      <input type="number" value="${item.qty}" min="0" oninput="items[${i}].qty=+this.value;calcTotals()" style="text-align:center">
+      <input type="number" value="${item.rate}" min="0" oninput="items[${i}].rate=+this.value;calcTotals()">
+      <div class="item-amt" id="amt-${i}">${fmt(item.qty*item.rate)}</div>
+      <button class="del-btn" onclick="removeItem(${i})">×</button>
+    `;
+    tbody.appendChild(row);
+  });
+  calcTotals();
+}
+
+function addItem() { items.push({desc:'',qty:1,rate:0}); renderItems(); }
+function removeItem(i) { items.splice(i,1); renderItems(); }
+
+function calcTotals() {
+  const sub = items.reduce((s,it)=>s+it.qty*it.rate, 0);
+  const tax = sub * (parseFloat(document.getElementById('tax-rate').value)||0) / 100;
+  const total = sub + tax;
+  document.getElementById('subtotal').textContent = fmt(sub);
+  document.getElementById('tax-amt').textContent = fmt(tax);
+  document.getElementById('total-due').textContent = fmt(total);
+  syncPreview();
+}
+
+function syncPreview() {
+  const biz = document.getElementById('biz-name').value || 'Your Business';
+  const bizEmail = document.getElementById('biz-email').value;
+  const client = document.getElementById('client-name').value;
+  const clientEmail = document.getElementById('client-email').value;
+  const num = document.getElementById('inv-num').value;
+  const issued = document.getElementById('inv-date').value;
+  const due = document.getElementById('due-date').value;
+  document.getElementById('prev-biz').textContent = biz;
+  document.getElementById('prev-biz-email').textContent = bizEmail;
+  document.getElementById('prev-num').textContent = num;
+  document.getElementById('prev-dates').textContent = `Issued: ${issued} · Due: ${due}`;
+  document.getElementById('prev-from-name').textContent = biz;
+  document.getElementById('prev-from-email').textContent = bizEmail;
+  document.getElementById('prev-to-name').textContent = client;
+  document.getElementById('prev-to-email').textContent = clientEmail;
+
+  const tbody = document.getElementById('prev-items');
+  tbody.innerHTML = '';
+  items.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.desc||'—'}</td><td>${it.qty}</td><td>${fmt(it.rate)}</td><td>${fmt(it.qty*it.rate)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const sub = items.reduce((s,it)=>s+it.qty*it.rate, 0);
+  const taxRate = parseFloat(document.getElementById('tax-rate').value)||0;
+  const tax = sub * taxRate / 100;
+  document.getElementById('prev-sub').textContent = fmt(sub);
+  document.getElementById('prev-tax').textContent = fmt(tax);
+  document.getElementById('prev-total').textContent = fmt(sub+tax);
+
+  items.forEach((it,i)=>{ const el=document.getElementById('amt-'+i); if(el) el.textContent=fmt(it.qty*it.rate); });
+
+  const terms = document.getElementById('ai-terms').textContent;
+  const termsBox = document.getElementById('prev-terms');
+  if (terms && !terms.includes('Click "Generate')) {
+    termsBox.textContent = terms; termsBox.style.display = 'block';
+  } else { termsBox.style.display = 'none'; }
+}
+
+async function generateTerms() {
+  const btn = document.getElementById('ai-btn');
+  const out = document.getElementById('ai-terms');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Writing...';
+  out.innerHTML = '<span class="spinner"></span> Generating terms...';
+
+  const biz = document.getElementById('biz-name').value || 'the freelancer';
+  const client = document.getElementById('client-name').value || 'the client';
+  const taxRate = parseFloat(document.getElementById('tax-rate').value)||0;
+  const sub = items.reduce((s,it)=>s+it.qty*it.rate, 0);
+  const total = (sub + sub*taxRate/100).toFixed(2);
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 350,
+        messages: [{ role: 'user', content: `Write concise, professional payment terms for a freelance invoice. Business: "${biz}". Client: "${client}". Total: $${total}. Under 100 words, plain text only, no bullet points or markdown. Cover: payment due in 30 days, late fee of 1.5% per month, preferred payment methods (bank transfer or PayPal), and a warm thank you.` }]
+      })
+    });
+    const data = await resp.json();
+    out.innerHTML = '';
+    out.textContent = data.content.map(b=>b.text||'').join('');
+    syncPreview();
+  } catch(e) {
+    out.innerHTML = '<span style="color:#c0392b">Could not connect to AI. Please try again.</span>';
+  }
+  btn.disabled = false;
+  btn.textContent = '✦ Regenerate terms';
+}
+
+async function generateProposal() {
+  const btn = document.getElementById('prop-btn');
+  const out = document.getElementById('ai-proposal');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Writing proposal...';
+  out.innerHTML = '<span class="spinner"></span>';
+
+  const proj = document.getElementById('proj-name').value;
+  const client = document.getElementById('prop-client').value;
+  const desc = document.getElementById('proj-desc').value;
+  const budget = document.getElementById('prop-budget').value;
+  const timeline = document.getElementById('prop-timeline').value;
+  const skill = document.getElementById('prop-skill').value;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: `Write a professional freelance project proposal. Project: "${proj}". Client: "${client}". Role: "${skill}". Budget: $${budget}. Timeline: ${timeline}. Project: "${desc}". Under 220 words, plain text, no markdown. Include: brief intro, what's included (3-4 deliverables), timeline, investment amount, and a clear call to action. Professional yet warm tone.` }]
+      })
+    });
+    const data = await resp.json();
+    out.innerHTML = '';
+    out.textContent = data.content.map(b=>b.text||'').join('');
+  } catch(e) {
+    out.innerHTML = '<span style="color:#c0392b">Could not generate proposal. Please try again.</span>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '✦ Regenerate proposal';
+}
+
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { alert('PDF library not loaded. Please check your connection.'); return; }
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, margin = 20;
+  let y = margin;
+
+  const biz = document.getElementById('biz-name').value || 'Business Name';
+  const bizEmail = document.getElementById('biz-email').value;
+  const client = document.getElementById('client-name').value;
+  const clientEmail = document.getElementById('client-email').value;
+  const num = document.getElementById('inv-num').value;
+  const issued = document.getElementById('inv-date').value;
+  const due = document.getElementById('due-date').value;
+  const taxRate = parseFloat(document.getElementById('tax-rate').value)||0;
+  const sub = items.reduce((s,it)=>s+it.qty*it.rate, 0);
+  const tax = sub * taxRate / 100;
+  const total = sub + tax;
+  const terms = document.getElementById('ai-terms').textContent;
+
+  // Header bar
+  doc.setFillColor(13, 13, 11);
+  doc.rect(0, 0, W, 18, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(245, 243, 238);
+  doc.text(biz, margin, 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(160, 158, 150);
+  doc.text('INVOICE', W - margin, 12, { align: 'right' });
+  y = 30;
+
+  // Meta
+  doc.setFontSize(9);
+  doc.setTextColor(13, 13, 11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(biz, margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 95);
+  doc.text(bizEmail, margin, y + 5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 13, 11);
+  doc.text(num, W - margin, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 95);
+  doc.setFontSize(8);
+  doc.text(`Issued: ${issued}`, W - margin, y + 5, { align: 'right' });
+  doc.text(`Due: ${due}`, W - margin, y + 10, { align: 'right' });
+  y += 20;
+
+  // Divider
+  doc.setDrawColor(220, 218, 212);
+  doc.line(margin, y, W - margin, y);
+  y += 8;
+
+  // Bill to
+  doc.setFontSize(7);
+  doc.setTextColor(140, 138, 130);
+  doc.text('BILL TO', margin, y);
+  y += 5;
+  doc.setFontSize(10);
+  doc.setTextColor(13, 13, 11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(client, margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 95);
+  doc.text(clientEmail, margin, y + 5);
+  y += 16;
+
+  // Table header
+  doc.setFillColor(237, 233, 225);
+  doc.rect(margin, y, W - margin * 2, 7, 'F');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 95);
+  doc.setFont('helvetica', 'bold');
+  const colX = [margin + 2, margin + 90, margin + 120, margin + 150];
+  ['DESCRIPTION', 'QTY', 'RATE', 'AMOUNT'].forEach((h, i) => {
+    doc.text(h, i >= 1 ? colX[i] : colX[0], y + 5, i >= 1 ? { align: 'right' } : {});
+  });
+  y += 10;
+
+  // Items
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  items.forEach((item, idx) => {
+    if (idx % 2 === 0) { doc.setFillColor(250, 250, 247); doc.rect(margin, y - 2, W - margin * 2, 8, 'F'); }
+    doc.setTextColor(13, 13, 11);
+    doc.text(item.desc || '—', colX[0], y + 4);
+    doc.setTextColor(80, 80, 75);
+    doc.text(String(item.qty), colX[1], y + 4, { align: 'right' });
+    doc.text(fmt(item.rate), colX[2], y + 4, { align: 'right' });
+    doc.setTextColor(13, 13, 11);
+    doc.text(fmt(item.qty * item.rate), W - margin - 2, y + 4, { align: 'right' });
+    y += 9;
+  });
+  y += 4;
+
+  // Totals
+  doc.setDrawColor(220, 218, 212);
+  doc.line(W - margin - 60, y, W - margin, y);
+  y += 5;
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 100, 95);
+  [['Subtotal', fmt(sub)], [`Tax (${taxRate}%)`, fmt(tax)]].forEach(([label, val]) => {
+    doc.text(label, W - margin - 58, y);
+    doc.text(val, W - margin, y, { align: 'right' });
+    y += 6;
+  });
+  doc.setDrawColor(13, 13, 11);
+  doc.setLineWidth(0.5);
+  doc.line(W - margin - 60, y, W - margin, y);
+  y += 5;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 13, 11);
+  doc.text('Total due', W - margin - 58, y + 1);
+  doc.text(fmt(total), W - margin, y + 1, { align: 'right' });
+  doc.setLineWidth(0.2);
+  y += 12;
+
+  // Terms
+  if (terms && !terms.includes('Click')) {
+    doc.setDrawColor(220, 218, 212);
+    doc.line(margin, y, W - margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(130, 128, 120);
+    const lines = doc.splitTextToSize(terms, W - margin * 2);
+    doc.text(lines, margin, y);
+  }
+
+  // Footer
+  doc.setFillColor(13, 13, 11);
+  doc.rect(0, 287, W, 10, 'F');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 95);
+  doc.text('Generated by InvoiceAI', W / 2, 293, { align: 'center' });
+
+  doc.save(`${num || 'invoice'}.pdf`);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['invoice','proposal','preview'][i]===name));
+  document.getElementById('tab-invoice').style.display = name==='invoice' ? 'grid' : 'none';
+  document.getElementById('tab-invoice').className = name==='invoice' ? 'tab-content active' : 'tab-content';
+  document.getElementById('tab-proposal').style.display = name==='proposal' ? 'block' : 'none';
+  document.getElementById('tab-preview').style.display = name==='preview' ? 'block' : 'none';
+  if (name==='preview') {
+    const clone = document.getElementById('invoice-preview-box').cloneNode(true);
+    const target = document.getElementById('preview-clone-target');
+    target.innerHTML = '';
+    target.appendChild(clone);
+  }
+  document.getElementById('ai-btn').style.display = name==='invoice' ? '' : 'none';
+}
+
+document.getElementById('ai-btn').style.display = '';
+renderItems();
+syncPreview();
+</script>
+</body>
+</html>
