@@ -399,18 +399,18 @@ async function generateTerms() {
   const total = (sub + sub*taxRate/100).toFixed(2);
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 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' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'llama3-70b-8192',
         max_tokens: 350,
         messages: [{ role: 'user', content: `Write concise, professional payment terms for a freelance invoice. Business: "${biz}". Client: "${client}". Total: $${total}. Under 100 words, plain text only, no bullet points or markdown. Cover: payment due in 30 days, late fee of 1.5% per month, preferred payment methods (bank transfer or PayPal), and a warm thank you.` }]
       })
     });
     const data = await resp.json();
     out.innerHTML = '';
-    out.textContent = data.content.map(b=>b.text||'').join('');
+    out.textContent = data.choices[0].message.content;
     syncPreview();
   } catch(e) {
     out.innerHTML = '<span style="color:#c0392b">Could not connect to AI. Please try again.</span>';
@@ -434,18 +434,18 @@ async function generateProposal() {
   const skill = document.getElementById('prop-skill').value;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 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' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'llama3-70b-8192',
         max_tokens: 600,
         messages: [{ role: 'user', content: `Write a professional freelance project proposal. Project: "${proj}". Client: "${client}". Role: "${skill}". Budget: $${budget}. Timeline: ${timeline}. Project: "${desc}". Under 220 words, plain text, no markdown. Include: brief intro, what's included (3-4 deliverables), timeline, investment amount, and a clear call to action. Professional yet warm tone.` }]
       })
     });
     const data = await resp.json();
     out.innerHTML = '';
-    out.textContent = data.content.map(b=>b.text||'').join('');
+    out.textContent = data.choices[0].message.content;
   } catch(e) {
     out.innerHTML = '<span style="color:#c0392b">Could not generate proposal. Please try again.</span>';
   }
